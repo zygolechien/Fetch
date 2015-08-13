@@ -35,11 +35,30 @@ final class MIME
         $result = '';
 
         foreach (imap_mime_header_decode($text) as $word) {
-            $ch = 'default' === $word->charset ? 'ascii' : $word->charset;
-
-            $result .= iconv($ch, $targetCharset, $word->text);
-        }
+            if($word->charset == 'default') {
+                $word->charset = 'ascii';
+            }
+            $result .= MIME::convertStringEncoding($word->text, $word->charset, $targetCharset);
+            }
 
         return $result;
+    }
+
+    /**
+     * Converts a string from one encoding to another.
+     * @param string $string
+     * @param string $fromEncoding
+     * @param string $toEncoding
+     * @return string Converted string if conversion was successful, or the original string if not
+     */
+    protected static function convertStringEncoding($string, $fromEncoding, $toEncoding) {
+        $convertedString = null;
+        if($string && $fromEncoding != $toEncoding) {
+            $convertedString = @iconv($fromEncoding, $toEncoding . '//IGNORE', $string);
+            if(!$convertedString && extension_loaded('mbstring')) {
+                $convertedString = @mb_convert_encoding($string, $toEncoding, $fromEncoding);
+            }
+        }
+        return $convertedString ?: $string;
     }
 }
