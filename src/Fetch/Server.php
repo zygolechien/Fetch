@@ -412,14 +412,15 @@ class Server
      * @see    http://php.net/manual/en/function.imap-sort.php
      * @param  int       $orderBy
      * @param  bool      $reverse
+     * @param  int       $offset
      * @param  int       $limit
      * @return Message[]
      */
-    public function getOrderedMessages($orderBy, $reverse, $limit)
+    public function getOrderedMessages($orderBy, $reverse, $offset = 0, $limit = 10)
     {
         $msgIds = imap_sort($this->getImapStream(), $orderBy, $reverse ? 1 : 0, SE_UID);
 
-        return array_map(array($this, 'getMessageByUid'), array_slice($msgIds, 0, $limit));
+        return array_map(array($this, 'getMessageByUid'), array_slice($msgIds, $offset, $limit));
     }
 
     /**
@@ -500,6 +501,38 @@ class Server
     {
         return imap_list($this->getImapStream(), $this->getServerSpecification(), $pattern);
     }
+
+    /**
+	 * Retrieve the quota settings per user
+	 * @return array - FALSE in the case of call failure
+	 */
+	protected function getQuota() {
+		return imap_get_quotaroot($this->getImapStream(), 'INBOX');
+	}
+
+	/**
+	 * Return quota limit in KB
+	 * @return int - FALSE in the case of call failure
+	 */
+	public function getQuotaLimit() {
+		$quota = $this->getQuota();
+		if(is_array($quota)) {
+			$quota = $quota['STORAGE']['limit'];
+		}
+		return $quota;
+	}
+
+	/**
+	 * Return quota usage in KB
+	 * @return int - FALSE in the case of call failure
+	 */
+	public function getQuotaUsage() {
+		$quota = $this->getQuota();
+		if(is_array($quota)) {
+			$quota = $quota['STORAGE']['usage'];
+		}
+		return $quota;
+	}
 
     /**
      * Deletes the given mailbox.
